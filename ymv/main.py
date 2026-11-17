@@ -13,6 +13,230 @@ ctk.set_appearance_mode("Dark")
 ctk.set_default_color_theme("blue")
 
 
+class ModernCompleteDialog(ctk.CTkToplevel):
+    """다운로드 완료 시 크고 선명하게 안내하는 모던 다크 테마 모달 대화상자"""
+    def __init__(self, parent, output_path, on_open_folder=None):
+        super().__init__(parent)
+        self.parent = parent
+        self.output_path = output_path
+        self.on_open_folder = on_open_folder
+
+        self.title("다운로드 완료")
+        self.geometry("520x330")
+        self.resizable(False, False)
+
+        # 다크 테마 일치 배경색
+        self.configure(fg_color=("#ffffff", "#18181b"))
+
+        # 최상위 모달 설정
+        self.transient(parent)
+        self.grab_set()
+
+        # 부모 창 중앙에 정렬
+        self._center_window(520, 330)
+
+        self._build_ui()
+
+        # 단축키 설정
+        self.bind("<Return>", lambda e: self._on_confirm())
+        self.bind("<KP_Enter>", lambda e: self._on_confirm())
+        self.bind("<Escape>", lambda e: self.destroy())
+
+        self.focus_force()
+
+    def _center_window(self, width, height):
+        self.update_idletasks()
+        try:
+            px = self.parent.winfo_rootx()
+            py = self.parent.winfo_rooty()
+            pw = self.parent.winfo_width()
+            ph = self.parent.winfo_height()
+            x = px + max(0, (pw - width) // 2)
+            y = py + max(0, (ph - height) // 2)
+            self.geometry(f"{width}x{height}+{x}+{y}")
+        except Exception:
+            self.geometry(f"{width}x{height}")
+
+    def _build_ui(self):
+        container = ctk.CTkFrame(self, fg_color="transparent")
+        container.pack(fill="both", expand=True, padx=24, pady=22)
+
+        # 1. 상단 완료 헤더
+        header = ctk.CTkFrame(container, fg_color="transparent")
+        header.pack(fill="x", pady=(0, 14))
+
+        icon_lbl = ctk.CTkLabel(
+            header,
+            text="🎉",
+            font=ctk.CTkFont(size=36)
+        )
+        icon_lbl.pack(side="left", padx=(0, 12))
+
+        title_box = ctk.CTkFrame(header, fg_color="transparent")
+        title_box.pack(side="left", fill="x", expand=True)
+
+        ctk.CTkLabel(
+            title_box,
+            text="다운로드가 완료되었습니다!",
+            font=ctk.CTkFont(family="Pretendard", size=18, weight="bold"),
+            text_color="#10b981",
+            anchor="w"
+        ).pack(fill="x")
+
+        ctk.CTkLabel(
+            title_box,
+            text="요청하신 미디어 파일이 성공적으로 저장되었습니다.",
+            font=ctk.CTkFont(family="Pretendard", size=12),
+            text_color=("gray45", "#a1a1aa"),
+            anchor="w"
+        ).pack(fill="x", pady=(2, 0))
+
+        # 2. 저장 위치 카드 박스 (글자가 아주 크고 뚜렷하게 잘 보이도록)
+        path_box = ctk.CTkFrame(
+            container,
+            corner_radius=10,
+            fg_color=("gray90", "#27272a"),
+            border_width=1,
+            border_color=("gray75", "#3f3f46")
+        )
+        path_box.pack(fill="x", pady=(0, 16))
+
+        ctk.CTkLabel(
+            path_box,
+            text="📂 저장 폴더 위치:",
+            font=ctk.CTkFont(family="Pretendard", size=12, weight="bold"),
+            text_color=("gray40", "#a1a1aa"),
+            anchor="w"
+        ).pack(fill="x", padx=16, pady=(12, 4))
+
+        # 큼직하고 선명한 15pt 볼드 폰트 & 밝은 하늘색
+        ctk.CTkLabel(
+            path_box,
+            text=self.output_path,
+            font=ctk.CTkFont(family="Pretendard", size=15, weight="bold"),
+            text_color=("#0284c7", "#38bdf8"),
+            anchor="w",
+            wraplength=440,
+            justify="left"
+        ).pack(fill="x", padx=16, pady=(0, 14))
+
+        # 3. 질문 텍스트
+        ctk.CTkLabel(
+            container,
+            text="지금 저장 폴더를 열어 파일을 확인하시겠습니까?",
+            font=ctk.CTkFont(family="Pretendard", size=13, weight="bold"),
+            text_color=("gray20", "#f4f4f5")
+        ).pack(pady=(0, 18))
+
+        # 4. 하단 버튼 영역
+        btn_box = ctk.CTkFrame(container, fg_color="transparent")
+        btn_box.pack(fill="x")
+
+        # 닫기 버튼
+        close_btn = ctk.CTkButton(
+            btn_box,
+            text="닫기 (Esc)",
+            width=110,
+            height=42,
+            fg_color=("gray75", "#3f3f46"),
+            hover_color=("gray65", "#52525b"),
+            text_color=("gray10", "#ffffff"),
+            font=ctk.CTkFont(family="Pretendard", size=13),
+            command=self.destroy
+        )
+        close_btn.pack(side="right", padx=(10, 0))
+
+        # 저장 폴더 열기 (Enter) 버튼
+        open_btn = ctk.CTkButton(
+            btn_box,
+            text="📂 저장 폴더 열기 (Enter)",
+            width=210,
+            height=42,
+            fg_color="#0284c7",
+            hover_color="#0369a1",
+            text_color="#ffffff",
+            font=ctk.CTkFont(family="Pretendard", size=14, weight="bold"),
+            command=self._on_confirm
+        )
+        open_btn.pack(side="right")
+
+    def _on_confirm(self):
+        self.destroy()
+        if self.on_open_folder:
+            self.on_open_folder()
+
+
+class ModernErrorDialog(ctk.CTkToplevel):
+    """오류 발생 시 크고 선명하게 안내하는 모던 다크 테마 대화상자"""
+    def __init__(self, parent, title, message):
+        super().__init__(parent)
+        self.parent = parent
+        self.title(title)
+        self.geometry("500x260")
+        self.resizable(False, False)
+        self.configure(fg_color=("#ffffff", "#18181b"))
+        self.transient(parent)
+        self.grab_set()
+
+        self._center_window(500, 260)
+        self._build_ui(title, message)
+        self.bind("<Return>", lambda e: self.destroy())
+        self.bind("<Escape>", lambda e: self.destroy())
+        self.focus_force()
+
+    def _center_window(self, width, height):
+        self.update_idletasks()
+        try:
+            px = self.parent.winfo_rootx()
+            py = self.parent.winfo_rooty()
+            pw = self.parent.winfo_width()
+            ph = self.parent.winfo_height()
+            x = px + max(0, (pw - width) // 2)
+            y = py + max(0, (ph - height) // 2)
+            self.geometry(f"{width}x{height}+{x}+{y}")
+        except Exception:
+            self.geometry(f"{width}x{height}")
+
+    def _build_ui(self, title, message):
+        container = ctk.CTkFrame(self, fg_color="transparent")
+        container.pack(fill="both", expand=True, padx=24, pady=20)
+
+        header = ctk.CTkFrame(container, fg_color="transparent")
+        header.pack(fill="x", pady=(0, 12))
+
+        ctk.CTkLabel(header, text="❌", font=ctk.CTkFont(size=28)).pack(side="left", padx=(0, 10))
+        ctk.CTkLabel(
+            header,
+            text=title,
+            font=ctk.CTkFont(family="Pretendard", size=17, weight="bold"),
+            text_color="#ef4444"
+        ).pack(side="left")
+
+        msg_box = ctk.CTkFrame(container, corner_radius=8, fg_color=("gray90", "#27272a"), border_width=1, border_color=("gray75", "#3f3f46"))
+        msg_box.pack(fill="both", expand=True, pady=(0, 16))
+
+        ctk.CTkLabel(
+            msg_box,
+            text=message,
+            font=ctk.CTkFont(family="Pretendard", size=13),
+            text_color=("gray20", "#f4f4f5"),
+            wraplength=430,
+            justify="left"
+        ).pack(padx=14, pady=12, anchor="w")
+
+        btn = ctk.CTkButton(
+            container,
+            text="확인 (Enter)",
+            width=120,
+            height=38,
+            fg_color="#0284c7",
+            hover_color="#0369a1",
+            font=ctk.CTkFont(family="Pretendard", size=13, weight="bold"),
+            command=self.destroy
+        )
+        btn.pack(side="right")
+
+
 class YouTubeDownloaderApp(ctk.CTk):
     def __init__(self):
         super().__init__()
@@ -586,16 +810,16 @@ class YouTubeDownloaderApp(ctk.CTk):
             self.percent_label.configure(text="100%")
             self.detail_stats_label.configure(text="저장 폴더에서 파일을 확인하실 수 있습니다.")
 
-            ans = messagebox.askyesno(
-                "다운로드 완료",
-                f"다운로드가 성공적으로 완료되었습니다!\n\n저장 경로:\n{self.output_dir_var.get()}\n\n지금 저장 폴더를 여시겠습니까?"
+            # 글자가 크고 선명한 모던 다크 테마 완료 대화상자 호출
+            ModernCompleteDialog(
+                parent=self,
+                output_path=self.output_dir_var.get(),
+                on_open_folder=self.open_output_directory
             )
-            if ans:
-                self.open_output_directory()
         else:
             self.status_label.configure(text=f"❌ 다운로드 실패", text_color="#ef4444")
             self.detail_stats_label.configure(text=message)
-            messagebox.showerror("다운로드 실패", f"다운로드 중 오류가 발생했습니다:\n\n{message}")
+            ModernErrorDialog(self, "다운로드 실패", f"다운로드 중 오류가 발생했습니다:\n\n{message}")
 
 
 if __name__ == "__main__":
